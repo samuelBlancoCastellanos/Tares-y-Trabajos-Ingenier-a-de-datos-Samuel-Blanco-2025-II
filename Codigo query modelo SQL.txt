@@ -1,0 +1,85 @@
+-- Esquema base
+/*
+Importantes: DDL- create-alter-drop-truncate-rename
+Creacion de tablas: nombre tabla, atributos, restricciones, relación
+*/
+create database bdmascotas;
+use bdmascotas;
+
+create table Mascota(
+idMascota int primary key auto_increment,
+nombreMascota varchar(50) not null,
+raza varchar(25) not null
+);
+
+SELECT @@version, @@version_comment;
+
+CREATE DATABASE IF NOT EXISTS vet_clinica
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_0900_ai_ci;
+USE vet_clinica;
+
+-- 1) Dueños
+CREATE TABLE dueno (
+  dueno_id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(120) NOT NULL,
+  telefono VARCHAR(30),
+  direccion VARCHAR(200)
+) ENGINE=InnoDB;
+
+-- 2) Veterinarios
+CREATE TABLE veterinario (
+  vet_id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(120) NOT NULL,
+  registro_profesional VARCHAR(60) NOT NULL UNIQUE,
+  telefono VARCHAR(30)
+) ENGINE=InnoDB;
+
+-- 3) Vacunas
+CREATE TABLE vacuna (
+  vacuna_id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(120) NOT NULL,
+  fabricante VARCHAR(120),
+  dosis_recomendada VARCHAR(60),
+  UNIQUE KEY uq_vacuna_nombre (nombre)
+) ENGINE=InnoDB;
+
+-- 4) Mascotas
+CREATE TABLE mascota (
+  mascota_id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(120) NOT NULL,
+  especie ENUM('Perro','Gato','Ave','Reptil','Otro') NOT NULL,
+  raza VARCHAR(120),
+  sexo ENUM('M','F') NOT NULL,
+  fecha_nacimiento DATE,
+  dueno_id INT NOT NULL,
+  CONSTRAINT fk_mascota_dueno
+    FOREIGN KEY (dueno_id) REFERENCES dueno(dueno_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  KEY idx_mascota_dueno (dueno_id),
+  KEY idx_mascota_especie (especie)
+) ENGINE=InnoDB;
+
+-- 5) Aplicación de vacunas (tabla intermedia M:N)
+CREATE TABLE aplicacion_vacuna (
+  mascota_id INT NOT NULL,
+  vacuna_id INT NOT NULL,
+  fecha_aplicacion DATE NOT NULL,
+  vet_id INT,
+  lote VARCHAR(60),
+  observacion VARCHAR(250),
+  -- PK compuesta permite varias dosis de la misma vacuna en fechas distintas
+  PRIMARY KEY (mascota_id, vacuna_id, fecha_aplicacion),
+  CONSTRAINT fk_av_mascota
+    FOREIGN KEY (mascota_id) REFERENCES mascota(mascota_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_av_vacuna
+    FOREIGN KEY (vacuna_id) REFERENCES vacuna(vacuna_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_av_veterinario
+    FOREIGN KEY (vet_id) REFERENCES veterinario(vet_id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  KEY idx_av_vacuna (vacuna_id),
+  KEY idx_av_vet (vet_id),
+  KEY idx_av_fecha (fecha_aplicacion)
+) ENGINE=InnoDB;
